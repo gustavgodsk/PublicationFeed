@@ -11,6 +11,13 @@ export interface DecisionRecord {
 	votes_for: string[];
 	votes_against: string[];
 	votes_abstain: string[];
+	citizen_headline?: string;
+	citizen_impact_short?: string;
+	affected_groups?: string[];
+	impact_type?: string;
+	impact_horizon?: 'now' | 'soon' | 'long-term';
+	language_confidence?: 'low' | 'medium' | 'high';
+	summary_source?: 'human' | 'ai-reviewed' | 'ai-draft';
 	party_tags?: string[];
 	candidate_tags?: string[];
 	topic_tags?: string[];

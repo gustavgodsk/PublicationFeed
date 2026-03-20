@@ -411,3 +411,18 @@
 .party-card-tint {
 	background: linear-gradient(135deg, var(--party-soft) 0%, transparent 68%), var(--card);
 }
+
+.status-card-passed {
+	background: linear-gradient(135deg, color-mix(in oklch, #2ca86d 16%, var(--card)) 0%, var(--card) 70%);
+	border-color: color-mix(in oklch, #2ca86d, transparent 75%);
+}
+
+.status-card-rejected {
+	background: linear-gradient(135deg, color-mix(in oklch, #d65252 16%, var(--card)) 0%, var(--card) 70%);
+	border-color: color-mix(in oklch, #d65252, transparent 75%);
+}
+
+.status-card-committee {
+	background: linear-gradient(135deg, color-mix(in oklch, #64748b 16%, var(--card)) 0%, var(--card) 70%);
+	border-color: color-mix(in oklch, #64748b, transparent 75%);
+}
