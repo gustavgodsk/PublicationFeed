@@ -1,372 +1,191 @@
 <script lang="ts">
-    import {
-        Accordion,
-        AccordionContent,
-        AccordionItem,
-        AccordionTrigger
-    } from '$lib/components/ui/accordion';
-    import { Badge } from '$lib/components/ui/badge';
-    import type { BadgeVariant } from '$lib/components/ui/badge';
-    import { Button } from '$lib/components/ui/button';
-    import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
-    import { Input } from '$lib/components/ui/input';
-    import { Separator } from '$lib/components/ui/separator';
-    import type { PageData } from './$types';
+	import { Badge } from '$lib/components/ui/badge';
+	import { Button } from '$lib/components/ui/button';
+	import { Card, CardContent } from '$lib/components/ui/card';
+	import { Input } from '$lib/components/ui/input';
+	import PartyBadge from '$lib/components/PartyBadge.svelte';
+	import { findPartyBrand } from '$lib/data/party-branding';
+	import type { PageData } from './$types';
 
-    let { data }: { data: PageData } = $props();
+	type Decision = PageData['decisions'][number];
 
-    const facetKeys = {
-        city: 'city',
-        party: 'party',
-        candidate: 'candidate',
-        status: 'status'
-    } as const;
+	let { data }: { data: PageData } = $props();
 
-    function statusVariant(status: string): BadgeVariant {
-        if (status === 'Passed') return 'default';
-        if (status === 'Rejected') return 'destructive';
-        return 'secondary';
-    }
+	function partiesForCard(decision: Decision): string[] {
+		const names = [...(decision.party_tags ?? []), ...decision.proposers];
+		return Array.from(new Set(names)).slice(0, 3);
+	}
 
-    function withToggledParam(key: string, value: string): string {
-        const params = new URLSearchParams(data.queryString);
-        const values = params.getAll(key);
-        const isSelected = values.includes(value);
+	function leadParty(decision: Decision): string {
+		return partiesForCard(decision)[0] ?? decision.proposers[0] ?? 'Ukendt aktør';
+	}
 
-        params.delete(key);
-        for (const currentValue of values) {
-            if (!(isSelected && currentValue === value)) {
-                params.append(key, currentValue);
-            }
-        }
+	function leadStyle(decision: Decision): string {
+		const brand = findPartyBrand(leadParty(decision));
+		return `background: linear-gradient(135deg, ${brand.soft} 0%, transparent 65%), var(--card);`;
+	}
 
-        if (!isSelected) {
-            params.append(key, value);
-        }
+	function statusCopy(status: string): string {
+		if (status === 'Passed') return 'Vedtaget';
+		if (status === 'Rejected') return 'Afvist';
+		return 'Sendt til udvalg';
+	}
 
-        const query = params.toString();
-        return query ? `/?${query}` : '/';
-    }
+	function statusVariant(status: string): 'default' | 'destructive' | 'secondary' {
+		if (status === 'Passed') return 'default';
+		if (status === 'Rejected') return 'destructive';
+		return 'secondary';
+	}
 
-    function withClearedParam(key: string): string {
-        const params = new URLSearchParams(data.queryString);
-        params.delete(key);
-        const query = params.toString();
-        return query ? `/?${query}` : '/';
-    }
+	function isSelected(key: string, value: string): boolean {
+		const params = new URLSearchParams(data.queryString);
+		return params.getAll(key).includes(value);
+	}
 
-    function withRemovedParamValue(key: string, value: string): string {
-        const params = new URLSearchParams(data.queryString);
-        const values = params.getAll(key);
-        params.delete(key);
-
-        let removed = false;
-        for (const currentValue of values) {
-            if (!removed && currentValue === value) {
-                removed = true;
-                continue;
-            }
-            params.append(key, currentValue);
-        }
-
-        const query = params.toString();
-        return query ? `/?${query}` : '/';
-    }
-
-    function withClearedSearch(): string {
-        const params = new URLSearchParams(data.queryString);
-        params.delete('q');
-        const query = params.toString();
-        return query ? `/?${query}` : '/';
-    }
-
-    function withNewestSort(): string {
-        const params = new URLSearchParams(data.queryString);
-        params.delete('sort');
-        const query = params.toString();
-        return query ? `/?${query}` : '/';
-    }
-
-    function isSelected(key: string, value: string): boolean {
-        const params = new URLSearchParams(data.queryString);
-        return params.getAll(key).includes(value);
-    }
-
-    const activeFilters = $derived([
-        ...data.filters.cities.map((value) => ({ key: facetKeys.city, value, label: `By: ${value}` })),
-        ...data.filters.parties.map((value) => ({ key: facetKeys.party, value, label: `Parti: ${value}` })),
-        ...data.filters.candidates.map((value) => ({ key: facetKeys.candidate, value, label: `Kandidat: ${value}` })),
-        ...data.filters.statuses.map((value) => ({ key: facetKeys.status, value, label: `Status: ${value}` })),
-        ...(data.filters.q ? [{ key: 'q', value: data.filters.q, label: `Søgning: ${data.filters.q}` }] : []),
-        ...(data.filters.sort === 'oldest'
-            ? [{ key: 'sort', value: 'oldest', label: 'Sortering: Ældste først' }]
-            : [])
-    ]);
+	const activeFilterCount = $derived(
+		data.filters.cities.length +
+			data.filters.parties.length +
+			data.filters.candidates.length +
+			data.filters.statuses.length +
+			(data.filters.q ? 1 : 0) +
+			(data.filters.sort === 'oldest' ? 1 : 0)
+	);
 </script>
 
-<main class="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 md:px-6">
-    <header class="space-y-2">
-        <h1 class="text-3xl font-bold tracking-tight">Byrådsbeslutninger</h1>
-        <p class="text-muted-foreground max-w-3xl text-sm md:text-base">
-            Følg de seneste beslutninger, se hvem der foreslog dem, og få et hurtigt overblik over hvem der stemte
-            for eller imod.
-        </p>
-    </header>
+<main class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
+	<section class="bg-background/90 sticky top-[65px] z-30 rounded-xl border p-3 shadow-sm backdrop-blur md:top-[61px]">
+		<form method="GET" class="flex flex-wrap items-center gap-2">
+			<div class="min-w-56 flex-1">
+				<Input name="q" value={data.filters.q} placeholder="Søg: Vestergade, atomkraft, bolig..." />
+			</div>
 
-    <Card>
-        <CardHeader>
-            <CardTitle>Filtre</CardTitle>
-            <CardDescription>Filtrer på by, parti, kandidat, status eller søg i beslutningsteksten.</CardDescription>
-        </CardHeader>
-        <CardContent class="space-y-6">
-            <form method="GET" class="grid gap-3 md:grid-cols-[1fr_180px_auto]">
-                <Input name="q" value={data.filters.q} placeholder="Søg f.eks. Vestergade eller atomkraft" />
-                <select
-                    name="sort"
-                    class="border-input bg-background rounded-md border px-3 py-2 text-sm"
-                    value={data.filters.sort}
-                >
-                    <option value="newest">Nyeste først</option>
-                    <option value="oldest">Ældste først</option>
-                </select>
-                <Button type="submit">Anvend</Button>
+			<details class="group relative">
+				<summary class="border-input bg-background hover:bg-accent list-none rounded-md border px-3 py-2 text-sm">
+					By {#if data.filters.cities.length > 0}({data.filters.cities.length}){/if}
+				</summary>
+				<div class="bg-popover absolute left-0 z-40 mt-2 max-h-72 w-64 space-y-2 overflow-auto rounded-md border p-3 shadow-lg">
+					{#each data.facets.cities as city}
+						<label class="flex items-center gap-2 text-sm">
+							<input type="checkbox" name="city" value={city} checked={isSelected('city', city)} />
+							<span>{city}</span>
+						</label>
+					{/each}
+				</div>
+			</details>
 
-                {#each data.filters.cities as city}
-                    <input type="hidden" name="city" value={city} />
-                {/each}
-                {#each data.filters.parties as party}
-                    <input type="hidden" name="party" value={party} />
-                {/each}
-                {#each data.filters.candidates as candidate}
-                    <input type="hidden" name="candidate" value={candidate} />
-                {/each}
-                {#each data.filters.statuses as status}
-                    <input type="hidden" name="status" value={status} />
-                {/each}
-            </form>
+			<details class="group relative">
+				<summary class="border-input bg-background hover:bg-accent list-none rounded-md border px-3 py-2 text-sm">
+					Parti {#if data.filters.parties.length > 0}({data.filters.parties.length}){/if}
+				</summary>
+				<div class="bg-popover absolute left-0 z-40 mt-2 max-h-72 w-72 space-y-2 overflow-auto rounded-md border p-3 shadow-lg">
+					{#each data.facets.parties as party}
+						<label class="flex items-center gap-2 text-sm">
+							<input type="checkbox" name="party" value={party} checked={isSelected('party', party)} />
+							<span>{party}</span>
+						</label>
+					{/each}
+				</div>
+			</details>
 
-            {#if activeFilters.length > 0}
-                <div class="bg-muted/40 space-y-3 rounded-lg border p-3">
-                    <div class="flex items-center justify-between gap-2">
-                        <h2 class="text-sm font-semibold">Aktive filtre ({activeFilters.length})</h2>
-                        <Button href="/" variant="ghost" size="xs">Nulstil alle</Button>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        {#each activeFilters as filter}
-                            {#if filter.key === 'q'}
-                                <Badge href={withClearedSearch()} variant="secondary">{filter.label}</Badge>
-                            {:else if filter.key === 'sort'}
-                                <Badge href={withNewestSort()} variant="secondary">{filter.label}</Badge>
-                            {:else}
-                                <Badge href={withRemovedParamValue(filter.key, filter.value)} variant="secondary">{filter.label}</Badge>
-                            {/if}
-                        {/each}
-                    </div>
-                </div>
-            {/if}
+			<details class="group relative">
+				<summary class="border-input bg-background hover:bg-accent list-none rounded-md border px-3 py-2 text-sm">
+					Kandidat {#if data.filters.candidates.length > 0}({data.filters.candidates.length}){/if}
+				</summary>
+				<div class="bg-popover absolute left-0 z-40 mt-2 max-h-72 w-72 space-y-2 overflow-auto rounded-md border p-3 shadow-lg">
+					{#if data.facets.candidates.length === 0}
+						<p class="text-muted-foreground text-sm">Ingen kandidater i datasættet endnu.</p>
+					{:else}
+						{#each data.facets.candidates as candidate}
+							<label class="flex items-center gap-2 text-sm">
+								<input
+									type="checkbox"
+									name="candidate"
+									value={candidate}
+									checked={isSelected('candidate', candidate)}
+								/>
+								<span>{candidate}</span>
+							</label>
+						{/each}
+					{/if}
+				</div>
+			</details>
 
-            <div class="hidden grid-cols-2 gap-6 md:grid">
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between gap-2">
-                        <h2 class="text-sm font-semibold">By</h2>
-                        <a class="text-muted-foreground text-xs hover:underline" href={withClearedParam(facetKeys.city)}>Ryd</a>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        {#each data.facets.cities as city}
-                            <Badge
-                                href={withToggledParam(facetKeys.city, city)}
-                                variant={isSelected(facetKeys.city, city) ? 'default' : 'outline'}
-                            >
-                                {city}
-                            </Badge>
-                        {/each}
-                    </div>
-                </div>
+			<details class="group relative">
+				<summary class="border-input bg-background hover:bg-accent list-none rounded-md border px-3 py-2 text-sm">
+					Status {#if data.filters.statuses.length > 0}({data.filters.statuses.length}){/if}
+				</summary>
+				<div class="bg-popover absolute left-0 z-40 mt-2 max-h-72 w-64 space-y-2 overflow-auto rounded-md border p-3 shadow-lg">
+					{#each data.facets.statuses as status}
+						<label class="flex items-center gap-2 text-sm">
+							<input type="checkbox" name="status" value={status} checked={isSelected('status', status)} />
+							<span>{statusCopy(status)}</span>
+						</label>
+					{/each}
+				</div>
+			</details>
 
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between gap-2">
-                        <h2 class="text-sm font-semibold">Status</h2>
-                        <a class="text-muted-foreground text-xs hover:underline" href={withClearedParam(facetKeys.status)}>Ryd</a>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        {#each data.facets.statuses as status}
-                            <Badge
-                                href={withToggledParam(facetKeys.status, status)}
-                                variant={isSelected(facetKeys.status, status) ? 'default' : 'outline'}
-                            >
-                                {status}
-                            </Badge>
-                        {/each}
-                    </div>
-                </div>
+			<select name="sort" class="border-input bg-background rounded-md border px-3 py-2 text-sm">
+				<option value="newest" selected={data.filters.sort === 'newest'}>Nyeste først</option>
+				<option value="oldest" selected={data.filters.sort === 'oldest'}>Ældste først</option>
+			</select>
 
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between gap-2">
-                        <h2 class="text-sm font-semibold">Parti</h2>
-                        <a class="text-muted-foreground text-xs hover:underline" href={withClearedParam(facetKeys.party)}>Ryd</a>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        {#each data.facets.parties as party}
-                            <Badge
-                                href={withToggledParam(facetKeys.party, party)}
-                                variant={isSelected(facetKeys.party, party) ? 'default' : 'outline'}
-                            >
-                                {party}
-                            </Badge>
-                        {/each}
-                    </div>
-                </div>
+			<Button type="submit" size="sm">Opdater</Button>
+			<Button href="/" variant="ghost" size="sm">Nulstil</Button>
+		</form>
 
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between gap-2">
-                        <h2 class="text-sm font-semibold">Kandidat</h2>
-                        <a class="text-muted-foreground text-xs hover:underline" href={withClearedParam(facetKeys.candidate)}>Ryd</a>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        {#if data.facets.candidates.length === 0}
-                            <p class="text-muted-foreground text-sm">Ingen kandidatdata i det aktuelle datasæt endnu.</p>
-                        {:else}
-                            {#each data.facets.candidates as candidate}
-                                <Badge
-                                    href={withToggledParam(facetKeys.candidate, candidate)}
-                                    variant={isSelected(facetKeys.candidate, candidate) ? 'default' : 'outline'}
-                                >
-                                    {candidate}
-                                </Badge>
-                            {/each}
-                        {/if}
-                    </div>
-                </div>
-            </div>
+		{#if activeFilterCount > 0}
+			<div class="mt-3 flex items-center gap-2">
+				<Badge variant="outline">{activeFilterCount} aktive filtre</Badge>
+			</div>
+		{/if}
+	</section>
 
-            <Accordion type="multiple" class="md:hidden">
-                <AccordionItem value="cities">
-                    <AccordionTrigger class="py-2 text-sm font-semibold">By</AccordionTrigger>
-                    <AccordionContent>
-                        <div class="space-y-3">
-                            <a class="text-muted-foreground text-xs hover:underline" href={withClearedParam(facetKeys.city)}>Ryd byfilter</a>
-                            <div class="flex flex-wrap gap-2">
-                                {#each data.facets.cities as city}
-                                    <Badge
-                                        href={withToggledParam(facetKeys.city, city)}
-                                        variant={isSelected(facetKeys.city, city) ? 'default' : 'outline'}
-                                    >
-                                        {city}
-                                    </Badge>
-                                {/each}
-                            </div>
-                        </div>
-                    </AccordionContent>
-                </AccordionItem>
+	<section class="space-y-4">
+		<div class="flex items-center justify-between">
+			<p class="text-muted-foreground text-sm">{data.decisions.length} beslutninger</p>
+		</div>
 
-                <AccordionItem value="parties">
-                    <AccordionTrigger class="py-2 text-sm font-semibold">Parti</AccordionTrigger>
-                    <AccordionContent>
-                        <div class="space-y-3">
-                            <a class="text-muted-foreground text-xs hover:underline" href={withClearedParam(facetKeys.party)}>Ryd partifilter</a>
-                            <div class="flex flex-wrap gap-2">
-                                {#each data.facets.parties as party}
-                                    <Badge
-                                        href={withToggledParam(facetKeys.party, party)}
-                                        variant={isSelected(facetKeys.party, party) ? 'default' : 'outline'}
-                                    >
-                                        {party}
-                                    </Badge>
-                                {/each}
-                            </div>
-                        </div>
-                    </AccordionContent>
-                </AccordionItem>
+		{#if data.decisions.length === 0}
+			<Card>
+				<CardContent class="text-muted-foreground py-10 text-center text-sm">
+					Ingen beslutninger matcher det, du har valgt.
+				</CardContent>
+			</Card>
+		{:else}
+			<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+				{#each data.decisions as decision}
+					<a href={`/decision/${decision.id}?${data.queryString}`}>
+						<Card
+							class="hover:shadow-primary/15 hover:-translate-y-[2px] h-full transition-all duration-200"
+							style={leadStyle(decision)}
+						>
+							<CardContent class="flex h-full flex-col gap-4 pt-6">
+								<div class="flex items-center justify-between gap-2">
+									<Badge variant={statusVariant(decision.status)}>{statusCopy(decision.status)}</Badge>
+									<span class="text-muted-foreground text-xs">{decision.date}</span>
+								</div>
 
-                <AccordionItem value="candidates">
-                    <AccordionTrigger class="py-2 text-sm font-semibold">Kandidat</AccordionTrigger>
-                    <AccordionContent>
-                        <div class="space-y-3">
-                            <a class="text-muted-foreground text-xs hover:underline" href={withClearedParam(facetKeys.candidate)}>Ryd kandidatfilter</a>
-                            <div class="flex flex-wrap gap-2">
-                                {#if data.facets.candidates.length === 0}
-                                    <p class="text-muted-foreground text-sm">Ingen kandidatdata i det aktuelle datasæt endnu.</p>
-                                {:else}
-                                    {#each data.facets.candidates as candidate}
-                                        <Badge
-                                            href={withToggledParam(facetKeys.candidate, candidate)}
-                                            variant={isSelected(facetKeys.candidate, candidate) ? 'default' : 'outline'}
-                                        >
-                                            {candidate}
-                                        </Badge>
-                                    {/each}
-                                {/if}
-                            </div>
-                        </div>
-                    </AccordionContent>
-                </AccordionItem>
+								<h2 class="text-base leading-snug font-semibold">{decision.title}</h2>
+								<p class="text-muted-foreground text-sm [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden">
+									{decision.summary}
+								</p>
 
-                <AccordionItem value="statuses">
-                    <AccordionTrigger class="py-2 text-sm font-semibold">Status</AccordionTrigger>
-                    <AccordionContent>
-                        <div class="space-y-3">
-                            <a class="text-muted-foreground text-xs hover:underline" href={withClearedParam(facetKeys.status)}>Ryd statusfilter</a>
-                            <div class="flex flex-wrap gap-2">
-                                {#each data.facets.statuses as status}
-                                    <Badge
-                                        href={withToggledParam(facetKeys.status, status)}
-                                        variant={isSelected(facetKeys.status, status) ? 'default' : 'outline'}
-                                    >
-                                        {status}
-                                    </Badge>
-                                {/each}
-                            </div>
-                        </div>
-                    </AccordionContent>
-                </AccordionItem>
-            </Accordion>
-
-            <div class="flex justify-end">
-                <Button href="/" variant="outline">Nulstil alle filtre</Button>
-            </div>
-        </CardContent>
-    </Card>
-
-    <section class="space-y-4">
-        <div class="flex items-center justify-between">
-            <h2 class="text-lg font-semibold">Beslutninger</h2>
-            <p class="text-muted-foreground text-sm">{data.decisions.length} resultater</p>
-        </div>
-
-        {#if data.decisions.length === 0}
-            <Card>
-                <CardContent class="text-muted-foreground py-8 text-center text-sm">
-                    Ingen beslutninger matcher de valgte filtre.
-                </CardContent>
-            </Card>
-        {:else}
-            <div class="space-y-4">
-                {#each data.decisions as decision}
-                    <Card class="hover:border-primary/30 transition-colors">
-                        <CardHeader class="space-y-3">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <Badge variant="outline">{decision.city}</Badge>
-                                <Badge variant={statusVariant(decision.status)}>{decision.status}</Badge>
-                                <span class="text-muted-foreground text-xs">{decision.date}</span>
-                            </div>
-                            <CardTitle class="text-xl leading-snug">
-                                <a class="hover:underline" href={`/decision/${decision.id}?${data.queryString}`}>{decision.title}</a>
-                            </CardTitle>
-                            <CardDescription>
-                                Foreslået af: {decision.proposers.join(', ') || 'Ukendt'}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent class="space-y-4">
-                            <p class="text-sm leading-6">{decision.summary}</p>
-                            <div class="flex items-center justify-end">
-                                <Button href={`/decision/${decision.id}?${data.queryString}`} variant="outline" size="sm"
-                                    >Se detaljer</Button
-                                >
-                            </div>
-                        </CardContent>
-                    </Card>
-                {/each}
-            </div>
-        {/if}
-    </section>
+								<div class="mt-auto space-y-3">
+									<div class="flex flex-wrap gap-2">
+										{#each partiesForCard(decision) as party}
+											<PartyBadge partyName={party} compact={true} />
+										{/each}
+									</div>
+									<div class="flex items-center justify-between">
+										<Badge variant="outline">{decision.city}</Badge>
+										<span class="text-primary text-sm font-semibold">Se hvad der blev besluttet</span>
+									</div>
+								</div>
+							</CardContent>
+						</Card>
+					</a>
+				{/each}
+			</div>
+		{/if}
+	</section>
 </main>
