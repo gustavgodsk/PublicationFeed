@@ -1,7 +1,12 @@
-import decisions from '$lib/data/mock_decisions.json';
+import decisionRepository, { parseFilters } from '$lib/server/decisions/mock-repository';
 
-export async function load() {
+export async function load({ url }) {
+    const filters = parseFilters(url.searchParams);
+
     return {
-        decisions
+        decisions: decisionRepository.listDecisions(filters),
+        facets: decisionRepository.getFacets(),
+        filters,
+        queryString: url.searchParams.toString()
     };
 }
