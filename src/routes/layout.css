@@ -37,6 +37,12 @@
 	--sidebar-accent-foreground: oklch(0.205 0 0);
 	--sidebar-border: oklch(0.922 0 0);
 	--sidebar-ring: oklch(0.708 0 0);
+	--status-passed-bg: #dcfce7;
+	--status-passed-border: #86efac;
+	--status-rejected-bg: #fee2e2;
+	--status-rejected-border: #fca5a5;
+	--status-committee-bg: #e2e8f0;
+	--status-committee-border: #94a3b8;
 }
 
 .dark {
@@ -71,6 +77,12 @@
 	--sidebar-accent-foreground: oklch(0.985 0 0);
 	--sidebar-border: oklch(1 0 0 / 10%);
 	--sidebar-ring: oklch(0.556 0 0);
+	--status-passed-bg: #183926;
+	--status-passed-border: #2d6a45;
+	--status-rejected-bg: #442326;
+	--status-rejected-border: #7f3a40;
+	--status-committee-bg: #252f3f;
+	--status-committee-border: #3f4f67;
 
 	--party-a-color: #e16e66;
 	--party-a-soft: #4a2320;
@@ -413,16 +425,16 @@
 }
 
 .status-card-passed {
-	background: linear-gradient(135deg, color-mix(in oklch, #2ca86d 16%, var(--card)) 0%, var(--card) 70%);
-	border-color: color-mix(in oklch, #2ca86d, transparent 75%);
+	background-color: var(--status-passed-bg) !important;
+	border-color: var(--status-passed-border) !important;
 }
 
 .status-card-rejected {
-	background: linear-gradient(135deg, color-mix(in oklch, #d65252 16%, var(--card)) 0%, var(--card) 70%);
-	border-color: color-mix(in oklch, #d65252, transparent 75%);
+	background-color: var(--status-rejected-bg) !important;
+	border-color: var(--status-rejected-border) !important;
 }
 
 .status-card-committee {
-	background: linear-gradient(135deg, color-mix(in oklch, #64748b 16%, var(--card)) 0%, var(--card) 70%);
-	border-color: color-mix(in oklch, #64748b, transparent 75%);
+	background-color: var(--status-committee-bg) !important;
+	border-color: var(--status-committee-border) !important;
 }

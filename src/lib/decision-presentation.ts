@@ -43,12 +43,12 @@ export function leadPartyName(decision: DecisionRecord): string {
 }
 
 export function toDecisionCardModel(decision: DecisionRecord, queryString: string): DecisionCardModel {
-    const fallbackHeadline = decision.title;
+    const fallbackHeadline = decision.citizen_headline ?? decision.title;
     const fallbackImpact = decision.summary;
 
     return {
         id: decision.id,
-        headline: decision.citizen_headline ?? fallbackHeadline,
+        headline: decision.proposal_headline ?? fallbackHeadline,
         impact: decision.citizen_impact_short ?? fallbackImpact,
         date: decision.date,
         city: decision.city,

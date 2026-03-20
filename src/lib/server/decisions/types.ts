@@ -11,6 +11,7 @@ export interface DecisionRecord {
 	votes_for: string[];
 	votes_against: string[];
 	votes_abstain: string[];
+	proposal_headline?: string;
 	citizen_headline?: string;
 	citizen_impact_short?: string;
 	affected_groups?: string[];
@@ -39,6 +40,12 @@ export interface DecisionFacets {
 	parties: string[];
 	candidates: string[];
 	statuses: DecisionStatus[];
+}
+
+export interface DecisionRepository {
+	listDecisions(filters: DecisionFilters): DecisionRecord[];
+	getDecisionById(id: string): DecisionRecord | null;
+	getFacets(): DecisionFacets;
 }
 
 export interface DecisionsPageData {

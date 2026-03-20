@@ -1,6 +1,5 @@
 import rawDecisions from '$lib/data/mock_decisions.json';
-import type { DecisionFacets, DecisionFilters, DecisionRecord, DecisionStatus } from './types';
-import type { DecisionRepository } from './repository';
+import type { DecisionRepository, DecisionRecord, DecisionStatus } from './types';
 
 const decisions = rawDecisions as DecisionRecord[];
 
@@ -36,6 +35,7 @@ function buildSearchText(decision: DecisionRecord): string {
 	return [
 		decision.id,
 		decision.city,
+		decision.proposal_headline ?? '',
 		decision.title,
 		decision.summary,
 		decision.citizen_headline ?? '',
@@ -121,23 +121,5 @@ const mockDecisionRepository: DecisionRepository = {
 		};
 	}
 };
-
-export function parseFilters(searchParams: URLSearchParams): DecisionFilters {
-	const sort = searchParams.get('sort') === 'oldest' ? 'oldest' : 'newest';
-	const statuses = searchParams
-		.getAll('status')
-		.filter((status): status is DecisionStatus =>
-			status === 'Passed' || status === 'Rejected' || status === 'Sent to Committee'
-		);
-
-	return {
-		sort,
-		cities: searchParams.getAll('city').filter(Boolean),
-		parties: searchParams.getAll('party').filter(Boolean),
-		candidates: searchParams.getAll('candidate').filter(Boolean),
-		statuses,
-		q: searchParams.get('q')?.trim() ?? ''
-	};
-}
 
 export default mockDecisionRepository;
