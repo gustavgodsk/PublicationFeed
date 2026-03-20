@@ -6,14 +6,10 @@
 </script>
 
 <div
-	class="inline-flex items-center gap-2 rounded-full border px-2 py-1"
-	style={`border-color:${brand.color}33;background:${brand.soft};color:${brand.text};`}
+	class={`party-tone-${brand.toneId} party-chip inline-flex items-center gap-2 rounded-full border px-2 py-1`}
 	title={partyName}
 >
-	<span
-		class="grid size-5 place-content-center rounded-full text-[11px] font-bold"
-		style={`background:${brand.color};color:white;`}
-	>
+	<span class="party-chip__dot grid size-5 place-content-center rounded-full text-[11px] font-bold">
 		{brand.letter}
 	</span>
 	{#if !compact}
